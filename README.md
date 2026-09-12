@@ -84,3 +84,20 @@ npm run build
 This local demo has no production tenant isolation, unattended collection, complete Ontario coverage, field-level accuracy, calibrated crop-risk model, forecast rankings or market. Live weather and map tiles depend on external services; collection depends on the user's browser and host agent.
 
 See the [70-minute plan](docs/MVP_70_MIN_PLAN.md) and [five-source provenance register](docs/research-sources.md). The larger [build blueprint](docs/AGARENA_BUILD_BLUEPRINT.md) remains a proposal; its Rust/PostGIS platform is not a description of this MVP.
+
+## Fady MVP prototype
+
+An independent synthetic field-intelligence workspace is available in
+[`prototypes/fady-mvp`](prototypes/fady-mvp/README.md). It includes a field map,
+forecast replay, evidence cards, tenant isolation and a disabled-by-default
+@WxOntario connector. It does not replace the primary application above.
+
+```sh
+cd prototypes/fady-mvp
+npm ci
+npm run dev
+```
+
+The prototype uses port 5173; stop any other application using that port first.
+Run `npm run verify` in the prototype directory for its checks and production
+client build. Its optional `.env` belongs in the prototype directory.
