@@ -1,0 +1,18 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Editor and operating system files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local dependencies, build outputs, and logs
+node_modules/
+.venv/
+__pycache__/
+dist/
+build/
+*.log
