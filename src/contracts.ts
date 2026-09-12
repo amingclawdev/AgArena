@@ -56,3 +56,32 @@ export type Forecast = { status: 'live' | 'cached' | 'unavailable' | 'demo'; pro
 export type Alert = { id: string; title: string; detail: string; kind: 'rain' | 'wind' | 'unknown' | 'info'; source: string; validAt: string | null; acknowledged: boolean };
 export type Job = { id: string; account: string; limit: number; status: 'waiting_for_agent' | 'collecting' | 'completed' | 'failed' | 'cancelled'; createdAt: string; updatedAt: string; capturedCount: number; message: string };
 export type Dashboard = { evidence: Evidence[]; places: Place[]; jobs: Job[]; serverTime: string; mode: 'live' | 'demo'; collector: { mode: 'host-assisted'; account: string }; counts: { total: number; mapped: number; images: number } };
+
+export type Analyst = { account: string; name: string; organization: string; focus: string; profileUrl: string; verificationUrl: string; existing?: boolean };
+export const comparisonMetricSchema = z.enum(['temperature_c', 'precipitation_mm', 'precipitation_probability']);
+export type ComparisonMetric = z.infer<typeof comparisonMetricSchema>;
+export const comparisonClaimSchema = z.object({
+  evidenceId: z.string().min(1).max(100), metric: comparisonMetricSchema,
+  validAt: iso, value: z.number().finite(), quote: z.string().trim().min(3).max(1000),
+  interpretationNote: z.string().trim().min(10).max(1000), reviewed: z.literal(true),
+}).strict();
+export type ComparisonClaimInput = z.infer<typeof comparisonClaimSchema>;
+export const outcomeSchema = z.object({
+  metric: z.enum(['temperature_c', 'precipitation_mm']), value: z.number().finite(),
+  validFrom: iso, validTo: iso, sourceType: z.enum(['station', 'radar_estimate']),
+  sourceUrl: z.string().url().max(1000).refine(s => new URL(s).protocol === 'https:', 'Use an HTTPS observation source'),
+  sourceName: z.string().trim().min(2).max(150), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180),
+  coverageComplete: z.literal(true), reviewed: z.literal(true), note: z.string().trim().min(10).max(1000),
+}).strict();
+export type ComparisonOutcome = z.infer<typeof outcomeSchema> & { recordedAt: string };
+export type AnalystClaim = { evidenceId: string; evidenceRevision: number; evidenceDigest: string; account: string; sourceUrl: string; quote: string; value: number; issuedAt: string; capturedAt: string; registeredAt: string; interpretationNote: string };
+export type ComparisonCase = {
+  id: string; mode: 'live' | 'demo'; locationId: string; placeName: string; latitude: number; longitude: number;
+  metric: ComparisonMetric; unit: string; eventDefinition: string; validFrom: string; validTo: string; createdAt: string;
+  baseline: { value: number; fetchedAt: string; issuedAt: null; sourceUrl: string; provider: string; latitude: number; longitude: number };
+  claims: AnalystClaim[]; outcome: ComparisonOutcome | null;
+};
+export type ComparisonResult = ComparisonCase & { summary: { count: number; mean: number | null; min: number | null; max: number | null; organizations: string[]; status: 'awaiting_observation' | 'evaluated'; scoreName: string; analystScores: { account: string; score: number }[]; consensusScore: number | null; baselineScore: number | null; improvement: number | null } };
+export type InsightGroup = { key: string; location: string; hazard: string; date: string; accounts: string[]; reports: { id: string; account: string; sourceUrl: string; summary: string; publishedAt: string | null; scoreability: string }[] };
+export type ResearchExample = { account: string; publishedDate: string; sourceUrl: string; sourceType: string; summary: string; treatment: string };
+export type AnalystDashboard = { mode: 'live' | 'demo'; analysts: Analyst[]; researchExamples: ResearchExample[]; groups: InsightGroup[]; comparisons: ComparisonResult[]; evidence: Evidence[]; note: string };

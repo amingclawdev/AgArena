@@ -36,11 +36,18 @@ test('real HTTP API and CLI workflow: wait, inspect, import, complete, forecast,
   assert.equal((await request('/api/forecast/monkton?threshold=nan')).status, 400);
   assert.equal((await request('/api/forecast/unsupported')).status, 404);
   const initial = await (await request('/api/dashboard')).json() as Dashboard; assert.equal(initial.evidence.length, 0);
+  const analystDirectory = await (await request('/api/analysts')).json();
+  assert.equal(analystDirectory.analysts.length,6); assert.equal(analystDirectory.researchExamples.length,5); assert.equal(analystDirectory.comparisons.length,0);
+  const comparisonsDemo = await (await request('/api/analysts?mode=demo')).json();
+  assert.equal(comparisonsDemo.comparisons[0].mode,'demo'); assert.equal(comparisonsDemo.comparisons[0].summary.count,5);
+  assert.equal((await request('/api/comparisons','POST',{})).status,400);
+  assert.equal((await request('/api/jobs','POST',{account:'not_shortlisted'})).status,400);
   const demo = await (await request('/api/dashboard?mode=demo')).json() as Dashboard; assert.ok(demo.evidence.every(e => e.source.kind === 'demo'));
 
   const created = await request('/api/jobs', 'POST', {}); assert.equal(created.status, 201);
   const job = await created.json() as Job; assert.equal(job.status, 'waiting_for_agent'); assert.equal(job.capturedCount, 0);
   const duplicateJob = await (await request('/api/jobs', 'POST', {})).json() as Job; assert.equal(duplicateJob.id, job.id);
+  assert.equal((await request('/api/jobs','POST',{account:'gtaweather1'})).status,409);
   const prompt = await (await request(`/api/jobs/${job.id}/prompt`)).text(); assert.match(prompt, /does not start an agent/);
   assert.equal((await request(`/api/jobs/${job.id}`, 'PATCH', { status: 'completed', evidenceIds: [] })).status, 409);
   assert.equal((await request(`/api/captures?job=${job.id}`, 'POST', testCapture(new Date()))).status, 409);
@@ -73,6 +80,10 @@ test('real HTTP API and CLI workflow: wait, inspect, import, complete, forecast,
   for (let i = 0; i < 3; i++) assert.equal((await request(`/api/captures?job=${nextJob.id}`, 'POST', testCapture(new Date(), `100000000000000001${i}`))).status, 201);
   assert.equal((await request(`/api/captures?job=${nextJob.id}`, 'POST', testCapture(new Date(), '1000000000000000020'))).status, 409);
   assert.equal((await request(`/api/jobs/${nextJob.id}`, 'PATCH', { status: 'cancelled' })).status, 200);
+  const analystJob=await (await request('/api/jobs','POST',{account:'GTAWEATHER1'})).json() as Job;
+  assert.equal(analystJob.account,'gtaweather1');
+  assert.match(await (await request(`/api/jobs/${analystJob.id}/prompt`)).text(),/https:\/\/x.com\/gtaweather1/);
+  await request(`/api/jobs/${analystJob.id}`,'PATCH',{status:'cancelled'});
 
   const outlook = await (await request('/api/forecast/monkton')).json() as { forecast: Forecast; alerts: Alert[] };
   assert.equal(outlook.forecast.status, 'live'); assert.equal(outlook.forecast.provider, 'Open-Meteo');

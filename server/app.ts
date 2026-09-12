@@ -8,6 +8,8 @@ import { places } from './places.ts';
 import { demoEvidence } from './fixtures.ts';
 import { demoForecast, getForecast, makeAlerts } from './weather.ts';
 import { agentPrompt } from './agent.ts';
+import { analysts, findAnalyst, researchExamples } from './analysts.ts';
+import { aggregateInsights, demoComparisons, evaluateCase, registerClaim, registerOutcome } from './comparisons.ts';
 import type { Job } from '../src/contracts.ts';
 
 export function createApp(store: Store, fetcher: typeof fetch = fetch) {
@@ -47,11 +49,21 @@ export function createApp(store: Store, fetcher: typeof fetch = fetch) {
     res.json({ forecast, alerts });
   });
   app.post('/api/alerts/:id/acknowledge', (req, res) => { const id = z.string().max(200).parse(req.params.id); store.acknowledge(id); res.json({ ok: true }); });
-  app.post('/api/jobs', (_req, res) => {
+  app.get('/api/analysts', (req, res) => {
+    const mode = req.query.mode === 'demo' ? 'demo' : 'live';
+    const evidence = mode === 'demo' ? demoEvidence() : store.evidence().filter(e => e.source.kind === 'x' && findAnalyst(e.source.account));
+    res.json({ mode, analysts, researchExamples, evidence, groups: aggregateInsights(evidence), comparisons: mode === 'demo' ? demoComparisons() : store.comparisons().map(evaluateCase), note: 'Five additional candidates, not a skill ranking. Shared employers/models can correlate forecasts. Qualitative summaries are grouped for reading, not treated as matched predictions.' });
+  });
+  app.post('/api/comparisons', async (req, res) => res.status(201).json(await registerClaim(req.body, store, fetcher)));
+  app.post('/api/comparisons/:id/outcome', (req, res) => res.json(registerOutcome(req.params.id, req.body, store)));
+  app.post('/api/jobs', (req, res) => {
+    const input = z.object({ account: z.string().max(100).optional() }).strict().parse(req.body ?? {});
+    const analyst = findAnalyst(input.account ?? 'WxOntario1');
+    if (!analyst) return void res.status(400).json({ error: 'Choose an account from the analyst shortlist' });
     const active = store.jobs().find(j => ['waiting_for_agent', 'collecting'].includes(j.status));
-    if (active) return void res.status(200).json(active);
+    if (active) return void (active.account === analyst.account ? res.status(200).json(active) : res.status(409).json({ error: `Finish or cancel the active @${active.account} job before collecting another analyst` }));
     const now = new Date().toISOString();
-    const job: Job = { id: randomUUID(), account: 'WxOntario1', limit: 3, status: 'waiting_for_agent', createdAt: now, updatedAt: now, capturedCount: 0, message: 'Waiting for your local Computer Use agent. Open the agent handoff to begin.' };
+    const job: Job = { id: randomUUID(), account: analyst.account, limit: 3, status: 'waiting_for_agent', createdAt: now, updatedAt: now, capturedCount: 0, message: 'Waiting for your local Computer Use agent. Open the agent handoff to begin.' };
     res.status(201).json(store.saveJob(job));
   });
   app.get('/api/jobs/:id/prompt', (req, res) => {

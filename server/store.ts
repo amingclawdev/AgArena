@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { Evidence, Job, Forecast } from '../src/contracts.ts';
+import type { Evidence, Job, Forecast, ComparisonCase, AnalystClaim, ComparisonOutcome } from '../src/contracts.ts';
 import { canonicalJson } from './evidence.ts';
 
 export class Store {
@@ -11,6 +11,7 @@ export class Store {
     this.db = new DatabaseSync(path);
     this.db.exec(`PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS evidence(id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS revisions(id TEXT, revision INTEGER, data TEXT NOT NULL, PRIMARY KEY(id, revision)); CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS cache(id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS acknowledgements(id TEXT PRIMARY KEY);`);
     this.db.exec('CREATE TABLE IF NOT EXISTS job_captures(job_id TEXT, evidence_id TEXT, PRIMARY KEY(job_id, evidence_id));');
+    this.db.exec('CREATE TABLE IF NOT EXISTS comparisons(id TEXT PRIMARY KEY, data TEXT NOT NULL);');
   }
   evidence(): Evidence[] { return this.db.prepare('SELECT data FROM evidence ORDER BY rowid DESC').all().map(r => JSON.parse(r.data as string)); }
   ingest(e: Evidence, jobId?: string) {
@@ -44,5 +45,26 @@ export class Store {
   saveForecast(f: Forecast) { this.db.prepare('INSERT OR REPLACE INTO cache VALUES(?,?)').run(f.locationId, JSON.stringify(f)); }
   acknowledge(id: string) { this.db.prepare('INSERT OR IGNORE INTO acknowledgements VALUES(?)').run(id); }
   acknowledged(id: string) { return Boolean(this.db.prepare('SELECT id FROM acknowledgements WHERE id=?').get(id)); }
+  comparisons(): ComparisonCase[] { return this.db.prepare('SELECT data FROM comparisons ORDER BY rowid DESC').all().map(r => JSON.parse(r.data as string)); }
+  comparison(id: string): ComparisonCase | null { const r = this.db.prepare('SELECT data FROM comparisons WHERE id=?').get(id); return r ? JSON.parse(r.data as string) : null; }
+  insertComparisonClaim(candidate: ComparisonCase, claim: AnalystClaim): ComparisonCase {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const current = this.comparison(candidate.id) ?? candidate;
+      if (current.outcome) throw new Error('Cannot add a prediction after an outcome');
+      if (Date.parse(claim.issuedAt) > Date.parse(current.baseline.fetchedAt)) throw new Error('Prediction is later than the frozen baseline cutoff');
+      const existing = current.claims.find(p => p.account.toLowerCase() === claim.account.toLowerCase());
+      if (!existing && current.claims.some(p => p.quote.replace(/\s+/g,' ').trim().toLowerCase() === claim.quote.replace(/\s+/g,' ').trim().toLowerCase())) throw new Error('Identical copied claims do not add an independent vote');
+      if (existing) {
+        if (existing.evidenceId !== claim.evidenceId || existing.value !== claim.value || existing.quote !== claim.quote) throw new Error('One immutable prediction per analyst per case; repeated posts do not add votes');
+      } else current.claims.push(claim);
+      this.db.prepare('INSERT OR REPLACE INTO comparisons VALUES(?,?)').run(current.id, JSON.stringify(current));
+      this.db.exec('COMMIT'); return current;
+    } catch (e) { this.db.exec('ROLLBACK'); throw e; }
+  }
+  setComparisonOutcome(id: string, outcome: ComparisonOutcome): ComparisonCase {
+    const c = this.comparison(id); if (!c || c.outcome) throw new Error('Comparison missing or already evaluated');
+    c.outcome = outcome; this.db.prepare('UPDATE comparisons SET data=? WHERE id=?').run(JSON.stringify(c), id); return c;
+  }
   close() { this.db.close(); }
 }

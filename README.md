@@ -4,6 +4,8 @@ A local Ontario weather-evidence demo: a host agent reads public X posts and ima
 
 The stack is React/Vite/MapLibre, Express/TypeScript, Zod and SQLite. Collection is **host-assisted**: creating a job prepares a handoff for a local Computer Use agent. It does not start an unattended collector.
 
+The **Analysts** page adds five researched weather analysts, dated source examples, an attributed insight digest and comparisons between reviewed numeric predictions, frozen provider forecasts and later sourced observations. See the [comparison workflow and methodology](docs/ANALYST_COMPARISON.md). Switch to Demo scenario for an explicitly synthetic scored example; no real analyst ranking is claimed.
+
 ## Run locally
 
 Use Node.js **22.13 or later** with npm. The server uses Node's built-in SQLite module; no database server or weather API key is configured by this demo.
@@ -32,7 +34,7 @@ SQLite defaults to `data/agarena.sqlite`; set `AGARENA_DB` in the server environ
 
 1. Start the app. Make the user's existing authenticated X browser available to the host's Computer Use capability.
 2. Create a collection job in the app, or run `npm run agent:job` in another terminal to print the current handoff.
-3. Give the handoff to the local agent. It reads at most **three** public **@WxOntario1** posts, opens relevant images and records only what it actually sees. A waiting job requires the host to act.
+3. Give the handoff to the local agent. It reads at most **three** public posts from the selected analyst (default **@WxOntario1**), opens relevant images and records only what it actually sees. A waiting job requires the host to act. Choose another account using Collect on the Analysts page; finish or cancel an active job first.
 4. The agent marks the job collecting when inspection starts, captures evidence after the job's creation time, and saves a JSON packet under `data/`.
 5. Import using the printed job ID:
 
@@ -77,7 +79,7 @@ npm run test:e2e
 npm run build
 ```
 
-`test:e2e` exercises the real local HTTP workflow; separate browser checks validate the visual UI. These commands are the integration procedure. **Application verification is pending at this documentation revision**; no pass is inferred from a script name. The integrator reports actual results against the assembled checkout.
+`test:e2e` exercises the real local HTTP workflow; separate browser checks validate the visual UI. The tests also cover immutable comparison baselines, claim and outcome matching, scoring and multi-account collection. Verification results are recorded against the actual delivered commit in AC.
 
 ## Scope and research
 
