@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { listFields, brief, evidence, kelvinToCelsius, metersPerSecondToKmh } from '../server/domain.mjs';
+const now='2026-09-12T15:00:00Z';
+test('tenant boundaries cover lists, briefs and evidence',()=>{assert.equal(listFields('alpha').length,2);assert.equal(listFields('beta').length,1);assert.throws(()=>brief('beta','north',now),/NOT_FOUND/);assert.throws(()=>evidence('beta','north',now),/NOT_FOUND/);assert.throws(()=>listFields('unknown'),/UNAUTHORIZED/)});
+test('delayed publication is excluded from as-of replay',()=>{assert.equal(brief('alpha','north','2026-09-12T13:00:00Z').forecast.id,'cycle-06');assert.equal(brief('alpha','north',now).forecast.id,'cycle-12');assert.equal(brief('alpha','north','2026-09-12T05:00:00Z').status,'missing')});
+test('stale and missing inputs remain unknown',()=>{assert.equal(brief('alpha','south',now).status,'missing');assert.equal(brief('alpha','north','2026-09-13T15:00:00Z').status,'stale');assert.equal(brief('alpha','north',now).observation.status,'stale')});
+test('withdrawal invalidates even historical derived assessments',()=>{const b=brief('alpha','north',now,'withdrawn');assert.equal(b.status,'withdrawn');assert.equal(b.forecast,null)});
+test('support, units and invalid times',()=>{assert.equal(brief('alpha','north',now).forecast.native_resolution_m,3000);assert.equal(kelvinToCelsius(273.15),0);assert.equal(metersPerSecondToKmh(1),3.6);assert.throws(()=>brief('alpha','north','garbage'),/INVALID_TIME/)});
+test('each cycle preserves its own rainfall accumulation',()=>{for(const time of ['2026-09-12T13:00:00Z',now]){const f=brief('alpha','north',time).forecast;assert.ok(Math.abs(f.hourly.slice(0,4).reduce((s,p)=>s+p.rain_mm,0)-f.rain_mm)<1e-9)}});
+test('ingestion availability is enforced separately from publication',()=>{assert.equal(brief('alpha','north','2026-09-12T14:02:00Z').forecast.id,'cycle-06')});
