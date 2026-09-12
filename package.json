@@ -3,36 +3,39 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=22.13"
-  },
   "scripts": {
     "dev": "concurrently -k -n api,web 'tsx watch server/index.ts' 'vite --host 127.0.0.1'",
-    "build": "tsc --noEmit && vite build",
-    "start": "tsx server/index.ts",
     "test": "tsx --test tests/*.test.ts",
+    "check": "tsc --noEmit",
+    "build": "npm run check && vite build",
+    "verify": "npm run test && npm run build",
+    "start": "tsx server/index.ts",
     "test:e2e": "tsx --test scripts/http-workflow.test.ts",
-    "check": "npm test && npm run build",
     "agent:job": "tsx scripts/agent-job.ts",
     "agent:import": "tsx scripts/import-capture.ts"
   },
+  "engines": {
+    "node": ">=22.13"
+  },
   "dependencies": {
-    "express": "^5.2.1",
-    "lucide-react": "^1.45.0",
-    "maplibre-gl": "^6.9.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "zod": "^4.6.2"
+    "express": "5.2.1",
+    "lucide-react": "1.45.0",
+    "maplibre-gl": "6.9.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.2"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/node": "^22.20.2",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.1",
-    "concurrently": "^10.0.5",
-    "tsx": "^4.23.13",
-    "typescript": "^7.0.2",
-    "vite": "^8.3.0"
+    "@types/express": "5.0.6",
+    "@types/geojson": "7946.0.16",
+    "@types/node": "22.20.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "concurrently": "10.0.5",
+    "prettier": "3.9.6",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
   }
 }

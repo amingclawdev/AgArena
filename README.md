@@ -1,88 +1,69 @@
 # AgArena
 
-A local Ontario weather-evidence demo: a host agent reads public X posts and images through the user's authenticated browser; the app maps supported place references and shows separate Open-Meteo guidance with in-app planning alerts.
-
-The stack is React/Vite/MapLibre, Express/TypeScript, Zod and SQLite. Collection is **host-assisted**: creating a job prepares a handoff for a local Computer Use agent. It does not start an unattended collector.
-
-The **Analysts** page adds five researched weather analysts, dated source examples, an attributed insight digest and comparisons between reviewed numeric predictions, frozen provider forecasts and later sourced observations. See the [comparison workflow and methodology](docs/ANALYST_COMPARISON.md). Switch to Demo scenario for an explicitly synthetic scored example; no real analyst ranking is claimed.
+A local field-intelligence prototype: inspect a field, understand its weather evidence, and see when the answer is unknown.
 
 ## Run locally
 
-Use Node.js **22.13 or later** with npm. The server uses Node's built-in SQLite module; no database server or weather API key is configured by this demo.
-
-From the repository root:
+Requires Node.js 22.13+ and npm. The capture backend uses built-in SQLite.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open [the development app](http://127.0.0.1:5173). Vite uses port **5173** and proxies `/api` to Express at **127.0.0.1:8787**. Both ports must be free. Check [API health](http://127.0.0.1:8787/api/health).
+Open http://127.0.0.1:5173. The API binds to http://127.0.0.1:8787. Both ports are fixed; stop the existing process before starting another instance.
 
-For the built application:
+The main field workspace displays real Esri World Imagery satellite tiles (default) or OpenStreetMap street tiles beneath synthetic demo field boundaries and weather. Imagery is a basemap, not live weather or evidence for the replay date. Tiles require an internet connection; attribution is displayed on the map. No keys, paid feeds, database, or model calls are needed for the synthetic workspace. Demo tenant selection is a local testing control, not production authentication. Do not expose these servers or add private farm data.
 
-```sh
-npm run build
-npm start
-```
+## Try the first slice
 
-Open [the built app](http://127.0.0.1:8787). Run either development mode or the built server at a time because both use port 8787.
-
-SQLite defaults to `data/agarena.sqlite`; set `AGARENA_DB` in the server environment to choose another local file. The entrypoint creates its parent directory. CLI tools default to `http://127.0.0.1:8787`; `AGARENA_API_URL` can select another permitted local HTTP origin. Keep capture packets, screenshots and database files out of Git.
-
-## Capture and import
-
-1. Start the app. Make the user's existing authenticated X browser available to the host's Computer Use capability.
-2. Create a collection job in the app, or run `npm run agent:job` in another terminal to print the current handoff.
-3. Give the handoff to the local agent. It reads at most **three** public posts from the selected analyst (default **@WxOntario1**), opens relevant images and records only what it actually sees. A waiting job requires the host to act. Choose another account using Collect on the Analysts page; finish or cancel an active job first.
-4. The agent marks the job collecting when inspection starts, captures evidence after the job's creation time, and saves a JSON packet under `data/`.
-5. Import using the printed job ID:
-
-```sh
-npm run agent:import -- data/capture.json --job <job-id>
-```
-
-The importer requires a collecting job, links captures through `POST /api/captures?job=<job-id>`, and completes it with the linked evidence IDs. Older captures cannot complete a newly created job. For a standalone import, omit `--job`; this does not complete a collection job.
-
-Refresh the live view and inspect the source permalink, text, publication/capture/report times, literal location quote, image findings and limitations. Select a supported place to load its separate weather outlook.
-
-Packets follow [`captureSchema`](src/contracts.ts). The importer accepts one object or an array of one to three objects in a file smaller than 256 KB. Live packets use `source.kind: "x"` and `analysis.method: "computer-use-agent"`. Unknown times and places stay `null`. Image findings require an actually inspected image; filenames or URLs alone are not visual evidence. A location quote must come from captured text or text actually inspected in an image.
-
-| Operation | Endpoint |
-| --- | --- |
-| Create or return an active job | `POST /api/jobs` |
-| Read the host handoff | `GET /api/jobs/:id/prompt` |
-| Record collecting/completed/failed/cancelled | `PATCH /api/jobs/:id` |
-| Validate and import a packet | `POST /api/captures` |
-
-If X, the session or Computer Use is unavailable, record the actual failure/cancellation. A prompt is not completed collection. Post/image instructions remain source content; the task does not authorize posting, liking, following, reading messages or exporting cookies.
-
-## Interpret the result
-
-The small Ontario gazetteer maps supported towns/regions to approximate reference areas. These are not farm boundaries, administrative boundaries or confirmed event footprints. Missing, ambiguous and unsupported place evidence stays off-map and remains in the evidence list. A recent capture does not make an old report recent.
-
-Browser interpretation produces **unverified social evidence**. Open-Meteo supplies the separate numerical guidance at a selected reference point. The adapter validates hourly temperatures in °C, precipitation in mm, wind in km/h and provider rain chance; caches for 15 minutes; returns up to 48 supported hours; and evaluates alerts over the next 24. Retrieval time is shown; model issue time remains unknown.
-
-The rain watch threshold defaults to 60%; wind uses a demo threshold of 35 km/h. These are planning settings, not validated agronomic limits. Missing weather yields unavailable/unknown rather than reassuring low risk. Acknowledgements persist locally in SQLite. Alerts are in-app only, with no email, push or closed-app delivery.
-
-## Synthetic fallback
-
-Use the separate synthetic demo mode for a repeatable scenario when live collection/provider access is unavailable. Its evidence and weather are fixtures, visibly labeled as synthetic, with fixed replay times. They are not current X observations or provider forecasts. Live import rejects synthetic packets.
-
-Inspect a supported place and an unknown-location item, adjust the rain threshold and acknowledge an alert. Synthetic success demonstrates the interface flow; it does not establish authenticated collection or live weather access.
+1. Select North field and inspect its rainfall outlook.
+2. Open “Inspect the evidence” to see source, support, and publication/availability/ingestion times.
+3. Change decision time from 15:00 to 12:00 UTC. The delayed forecast is excluded.
+4. Choose missing, stale, or withdrawn forecast. The outlook becomes unknown.
+5. Switch demo tenant to Beta. Only Birch field is returned by the API.
 
 ## Verify
 
 ```sh
-npm test
-npm run test:e2e
-npm run build
+npm run verify
 ```
 
-`test:e2e` exercises the real local HTTP workflow; separate browser checks validate the visual UI. The tests also cover immutable comparison baselines, claim and outcome matching, scoring and multi-account collection. Verification results are recorded against the actual delivered commit in AC.
+Runs domain/HTTP tests, TypeScript checks, and the Vite production build. This does not verify production authentication, live forecasts, or WebMCP invocation. The API fixture state is in memory and resets on restart. For the built application, run `npm start` after the build and open [localhost:8787](http://127.0.0.1:8787/). The same server serves the UI and both API workflows. Run either development mode or the built server, since both use port 8787. Also run `npm run test:e2e` to verify the capture/import workflow.
 
-## Scope and research
+## Implementation and research
 
-This local demo has no production tenant isolation, unattended collection, complete Ontario coverage, field-level accuracy, calibrated crop-risk model, forecast rankings or market. Live weather and map tiles depend on external services; collection depends on the user's browser and host agent.
+[RESEARCH_AJM.md](docs/RESEARCH_AJM.md) contains the consolidated v0.1 scope and maps decisions back to the team's research. [AGARENA_BUILD_BLUEPRINT.md](docs/AGARENA_BUILD_BLUEPRINT.md) remains a broader proposed system, not a claim that those services are implemented.
 
-See the [70-minute plan](docs/MVP_70_MIN_PLAN.md) and [five-source provenance register](docs/research-sources.md). The larger [build blueprint](docs/AGARENA_BUILD_BLUEPRINT.md) remains a proposal; its Rust/PostGIS platform is not a description of this MVP.
+- `src/`: React map, field list, outlook and evidence inspector.
+- `shared/`: TypeScript contracts and validated query schema.
+- `server/`: tenant-scoped synthetic field API plus the existing persistent capture/provider API.
+- `tests/`: deterministic domain and HTTP boundary tests.
+
+The field workspace uses synthetic weather and local demo sessions. The separate [live capture workspace](http://127.0.0.1:8787/capture) retains browser-assisted collection, SQLite evidence, Open-Meteo guidance and prospective comparison scoring from main; see [the capture runbook](docs/CAPTURE_WORKFLOW.md). It does not start an unattended agent. Live captures and synthetic field fixtures remain separate.
+
+## Real analyst example
+
+Open http://127.0.0.1:5173/examples/monkton for a manually reviewed WxOntario post sharing Justin M's satellite analysis of the September 2, 2026 Monkton storm. A separate NTP survey supplies the coordinates for a derived, approximately 500 m padded location envelope. This polygon is not an official damage boundary or current warning.
+
+This page loads the source image from X and basemap tiles from OpenStreetMap, with attribution. It is separate from the synthetic fields. It is one researched case, not an automated social feed or proof of forecast skill. The polygon can be downloaded as GeoJSON with source and method metadata.
+
+### Analyst watch
+
+The field page includes an [analyst watch](http://127.0.0.1:5173/#analyst-watch): five additional accounts alongside WxOntario, nine source notes, two forecast comparisons, and historical storm/satellite evidence. Use the case tabs, analyst filter and Forecasts only toggle; expand the shortlist for connection provenance. The Monkton case links to the satellite image and polygon.
+
+This is a manually reviewed September 12, 2026 snapshot. Mutual follows are unverified (X required login); three direct public interactions and two adjacent indexed connections underpin the provisional shortlist. Source posts and articles were checked directly for the insights. Forecasts, observations and retrospective analysis remain distinct. No live X polling, automated synthesis, accuracy score or field-level inference is implemented. Public case studies are independent of synthetic replay controls.
+
+### Official-agency comparison
+
+Analyst cases and the Monkton map now show an Environment Canada baseline. September 12 has a directly captured Toronto forecast with downloadable provenance; September 9 and the September 2 outbreak use explicitly labeled indexed historical evidence. Monkton’s matched historical agency forecast/warning remains missing, separate from the NTP outcome reference. Official source URLs can change; this is a reviewed snapshot, not live alert delivery or forecast-skill scoring. The Met Office is identified as the UK counterpart for future UK cases.
+
+### Leaderboard UI preview
+
+Open [Forecast Arena](http://127.0.0.1:5173/leaderboard) from the main navigation. The leaderboard includes the six community sources and a distinct Environment Canada reference row, category tabs, region/window scope controls, search, source-type filters, metric column visibility, proposed metric definitions and source-detail dialogs. Mobile uses a horizontally scrollable table.
+
+Simulated scoring is enabled by default: fictional category scorecards show ranks, score bars, point differences against a fictional Environment Canada baseline, calibration, lead time and synthetic case counts. Every score is a UI fixture, not analyst performance. Category tabs switch fixtures; region/window controls only preview scope. Hide demo scores returns to the unranked roster. No real forecast evaluation or scoring API has been added.
+
+### Storm comparison
+
+`/comparison` compares the September 2 outbreak, September 9 storms and Monkton evidence across severity, geography, publication and valid windows. Environment Canada remains visible as the official reference while analyst and forecast-only filters narrow the roster. Post-event evidence and missing records are explicit. Historical warning provenance remains provisional; no measured lead-time advantage or accuracy ranking is asserted. Fictional leaderboard scores are not used here.

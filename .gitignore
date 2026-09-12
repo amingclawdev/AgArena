@@ -23,3 +23,7 @@ coverage/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Local browser verification artifacts
+.playwright-cli/
+output/playwright/

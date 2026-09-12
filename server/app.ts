@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { Store } from './store.ts';
+import { createFieldRouter } from './field-router.ts';
 import { admitCapture, temporalStatus } from './evidence.ts';
 import { places } from './places.ts';
 import { demoEvidence } from './fixtures.ts';
@@ -22,6 +23,7 @@ export function createApp(store: Store, fetcher: typeof fetch = fetch) {
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin'); next();
   });
   app.use(express.json({ limit: '256kb' }));
+  app.use(createFieldRouter());
   app.get('/api/health', (_req, res) => res.json({ ok: true, collector: 'host-assisted', version: '0.1.0' }));
   app.get('/api/dashboard', (req, res) => {
     const mode = req.query.mode === 'demo' ? 'demo' : 'live';
@@ -90,7 +92,7 @@ export function createApp(store: Store, fetcher: typeof fetch = fetch) {
   });
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Route not found' }));
   app.use(express.static(resolve('dist')));
-  app.get('/', (_req, res) => res.sendFile(resolve('dist/index.html')));
+  app.get(['/', '/comparison', '/leaderboard', '/examples/monkton', '/capture'], (_req, res) => res.sendFile('index.html', { root: resolve('dist') }));
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const message = error instanceof z.ZodError ? error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ') : error instanceof Error ? error.message : 'Invalid request';
     const status = error && typeof error === 'object' && 'status' in error && error.status === 413 ? 413 : 400;
