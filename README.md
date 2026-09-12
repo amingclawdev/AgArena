@@ -12,9 +12,9 @@ A hackathon project exploring weather forecasts, farmer notifications, and maps 
 
 Repository initialized for team planning. Product requirements, architecture, data sources, and implementation will be decided after the team discussion. There is no application to run yet.
 
-## Team discussion
+## Research
 
-Use the [discussion checklist](docs/team-discussion.md) to agree on the hackathon scope and record decisions before development begins.
+Use [RESEARCH_AJM.md](docs/RESEARCH_AJM.md) for the project direction, open questions, and architecture research.
 
 ## Repository structure
 
@@ -23,7 +23,7 @@ AgArena/
 ├── README.md
 ├── .gitignore
 └── docs/
-    └── team-discussion.md
+    └── RESEARCH_AJM.md
 ```
 
 ## Get the repository
