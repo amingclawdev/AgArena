@@ -4,18 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n api,web 'tsx watch server/index.ts' 'vite --host 127.0.0.1'",
+    "dev": "concurrently -k \"AGARENA_DEMO=1 tsx watch server/index.ts\" \"vite --host 127.0.0.1\"",
     "test": "tsx --test tests/*.test.ts",
     "check": "tsc --noEmit",
     "build": "npm run check && vite build",
-    "verify": "npm run test && npm run build",
-    "start": "tsx server/index.ts",
-    "test:e2e": "tsx --test scripts/http-workflow.test.ts",
-    "agent:job": "tsx scripts/agent-job.ts",
-    "agent:import": "tsx scripts/import-capture.ts"
+    "verify": "npm run test && npm run build"
   },
   "engines": {
-    "node": ">=22.13"
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "express": "5.2.1",

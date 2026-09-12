@@ -118,8 +118,6 @@ function Workspace() {
         <nav aria-label="Primary">
           <span className="active">Field intelligence</span>
           <a href="#analyst-watch">Analyst watch</a>
-          <a href="/comparison">Storm comparison</a>
-          <a href="/capture">Live capture</a>
           <a href="/leaderboard">
             Leaderboard <small>Preview</small>
           </a>

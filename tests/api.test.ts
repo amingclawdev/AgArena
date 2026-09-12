@@ -1,19 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createApp } from "../server/app.js";
-import { Store } from "../server/store.ts";
 test("HTTP boundary requires session and denies cross-tenant briefs", async () => {
-  const store = new Store(":memory:");
-  const server = createApp(store).listen(0, "127.0.0.1");
+  const server = createApp().listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw Error("No port");
   const base = `http://127.0.0.1:${address.port}/api`;
   try {
     assert.equal((await fetch(base + "/fields")).status, 401);
-    const dashboard = await fetch(base + "/dashboard");
-    assert.equal(dashboard.status, 200);
-    assert.equal((await dashboard.json()).mode, "live");
     assert.equal(
       (
         await fetch(base + "/demo/session", {
@@ -65,7 +60,7 @@ test("HTTP boundary requires session and denies cross-tenant briefs", async () =
     );
   } finally {
     await new Promise<void>((resolve, reject) =>
-      server.close((e) => { store.close(); e ? reject(e) : resolve(); }),
+      server.close((e) => (e ? reject(e) : resolve())),
     );
   }
 });

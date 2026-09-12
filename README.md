@@ -4,7 +4,7 @@ A local field-intelligence prototype: inspect a field, understand its weather ev
 
 ## Run locally
 
-Requires Node.js 22.13+ and npm. The capture backend uses built-in SQLite.
+Requires Node.js 22.12+ and npm. The current lockfile was verified with Node 23.7.0 / npm 10.9.2.
 
 ```sh
 npm ci
@@ -29,7 +29,7 @@ The main field workspace displays real Esri World Imagery satellite tiles (defau
 npm run verify
 ```
 
-Runs domain/HTTP tests, TypeScript checks, and the Vite production build. This does not verify production authentication, live forecasts, or WebMCP invocation. The API fixture state is in memory and resets on restart. For the built application, run `npm start` after the build and open [localhost:8787](http://127.0.0.1:8787/). The same server serves the UI and both API workflows. Run either development mode or the built server, since both use port 8787. Also run `npm run test:e2e` to verify the capture/import workflow.
+Runs domain/HTTP tests, TypeScript checks, and the Vite production build. This does not verify production authentication, live forecasts, or WebMCP invocation. The API fixture state is in memory and resets on restart. The build emits frontend assets only; the local API is a separate process.
 
 ## Implementation and research
 
@@ -37,10 +37,10 @@ Runs domain/HTTP tests, TypeScript checks, and the Vite production build. This d
 
 - `src/`: React map, field list, outlook and evidence inspector.
 - `shared/`: TypeScript contracts and validated query schema.
-- `server/`: tenant-scoped synthetic field API plus the existing persistent capture/provider API.
+- `server/`: synthetic evidence store, replay and tenant-scoped API.
 - `tests/`: deterministic domain and HTTP boundary tests.
 
-The field workspace uses synthetic weather and local demo sessions. The separate [live capture workspace](http://127.0.0.1:8787/capture) retains browser-assisted collection, SQLite evidence, Open-Meteo guidance and prospective comparison scoring from main; see [the capture runbook](docs/CAPTURE_WORKFLOW.md). It does not start an unattended agent. Live captures and synthetic field fixtures remain separate.
+No forecast league, pest model, external agent, or live connector is enabled yet.
 
 ## Real analyst example
 

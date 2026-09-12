@@ -1,5 +1,9 @@
-import { createApp } from './app.ts';
-import { Store } from './store.ts';
-const store = new Store(process.env.AGARENA_DB ?? 'data/agarena.sqlite');
-const server = createApp(store).listen(8787, '127.0.0.1', () => console.log('AgArena API + built demo: http://127.0.0.1:8787'));
-for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => server.close(() => { store.close(); process.exit(0); }));
+import { createApp } from "./app.js";
+if (process.env.AGARENA_DEMO !== "1")
+  throw new Error(
+    "This fixture server requires AGARENA_DEMO=1. It is not production authentication.",
+  );
+const server = createApp().listen(8787, "127.0.0.1", () =>
+  console.log("AgArena synthetic API: http://127.0.0.1:8787"),
+);
+process.on("SIGTERM", () => server.close());
