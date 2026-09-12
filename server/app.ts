@@ -17,7 +17,7 @@ export function createApp(store: Store, fetcher: typeof fetch = fetch) {
     const origin = req.headers.origin;
     if (origin && !['http://127.0.0.1:5173', 'http://localhost:5173', 'http://127.0.0.1:8787', 'http://localhost:8787'].includes(origin)) return void res.status(403).json({ error: 'Origin not allowed' });
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Referrer-Policy', 'no-referrer'); next();
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin'); next();
   });
   app.use(express.json({ limit: '256kb' }));
   app.get('/api/health', (_req, res) => res.json({ ok: true, collector: 'host-assisted', version: '0.1.0' }));
